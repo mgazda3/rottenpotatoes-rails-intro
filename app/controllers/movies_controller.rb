@@ -1,7 +1,7 @@
 class MoviesController < ApplicationController
+  helper_method :highlight
+  helper_method :rating?
   
-  
-
   def movie_params
     params.require(:movie).permit(:title, :rating, :description, :release_date)
   end
@@ -13,40 +13,38 @@ class MoviesController < ApplicationController
   end
 
   def index
+    #@movies = Movie.all
     @all_ratings = Movie.all_ratings
     
+    session[:ratings] = params[:ratings] unless params[:ratings].nil?
     
-    if params[:sort_by].nil? and params[:ratings].nil? and (!session[:sort_by].nil? or !session[:ratings].nil?)
-      redirect_to movies_path(:sort_by => session[:sort_by], :ratings => session[:ratings])
+    session[:sort_by] = params[:sort_by] unless params[:sort_by].nil?
+
+    if (params[:ratings].nil? and !session[:ratings].nil?) or (params[:sort_by].nil? and !session[:sort_by].nil?)
+      redirect_to movies_path(:ratings => session[:ratings], :sort_by => session[:sort_by])
     end
     
     
-   
     
-    
-    
-    
-    #@movies = Movie.all
     @ratings = params[:ratings]
     if params[:ratings].present?
-      @movies = Movie.where(rating: params[:ratings].keys)
+      @movies = Movie.where(rating: params[:ratings].keys).order(params[:sort_by])
+      
       
     else
       @movies = Movie.all
     end
     
-    
-    
-    if (params[:sort_by])
-      @movies = Movie.all.order(params[:sort_by])
+    #if (params[:sort_by])
       
+      
+    #end
+    
+    if !session[:ratings].nil? or !session[:sort_by].nil?
+     
+    else
+      return @movies = Movie.all
     end
-    
-    
-    session[:ratings] = @ratings
-    session[:sort_by] = @sort_by
-    
-    
   end
 
   def new
@@ -54,7 +52,7 @@ class MoviesController < ApplicationController
   end
 
   def create
-    @movie = Movie.create!(movie_params)
+    @movie = Movie.create!(params[:movie])
     flash[:notice] = "#{@movie.title} was successfully created."
     redirect_to movies_path
   end
@@ -65,7 +63,7 @@ class MoviesController < ApplicationController
 
   def update
     @movie = Movie.find params[:id]
-    @movie.update_attributes!(movie_params)
+    @movie.update_attributes!(params[:movie])
     flash[:notice] = "#{@movie.title} was successfully updated."
     redirect_to movie_path(@movie)
   end
@@ -77,4 +75,17 @@ class MoviesController < ApplicationController
     redirect_to movies_path
   end
 
+  def highlight(column)
+    if(session[:sort_by].to_s == column)
+      return 'hilite'
+    else
+      return ''
+    end
+  end
+
+  def rating?(rating)
+    temp = session[:ratings]
+    return true if temp.nil?
+    temp.include? rating
+  end
 end
